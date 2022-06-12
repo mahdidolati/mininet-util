@@ -22,10 +22,8 @@ class CustomTopology(Topo):
             h2EthNum = len(self.myNet.nodes[l[1]]["eths"])
             eth1Name = "{}-eth{}".format(h1Name, h1EthNum)
             eth2Name = "{}-eth{}".format(h2Name, h2EthNum)
-            ip1 = "10.0.{}.{}".format(l[0], h1EthNum+1)
-            ip2 = "10.0.{}.{}".format(l[1], h2EthNum+1)
-            mac1 = "00:00:00:00:0{}:0{}".format(l[0], h1EthNum+1)
-            mac2 = "00:00:00:00:0{}:0{}".format(l[1], h2EthNum+1)
+            ip1, mac1 = self.generateIpMac(l[0], h1EthNum+1)
+            ip2, mac2 = self.generateIpMac(l[1], h2EthNum+1)
             self.myNet.add_edge(l[0], l[1], eth1=eth1Name, eth2=eth2Name, ip1=ip1, ip2=ip2, mac1=mac1, mac2=mac2)
             self.myNet.add_edge(l[1], l[0], eth1=eth2Name, eth2=eth1Name, ip1=ip2, ip2=ip1, mac1=mac2, mac2=mac1)
             self.myNet.nodes[l[0]]["eths"].append(eth1Name)
@@ -38,20 +36,29 @@ class CustomTopology(Topo):
                             params1={ 'ip' : "{}/24".format(ip1) }, 
                             params2={ 'ip' : "{}/24".format(ip2) })
 
+    def generateIpMac(self, hostId, ethId):
+        hostIdHex = hex(hostId)[2:]
+        hostIdHex = hostIdHex if len(hostIdHex) == 2 else '0' + hostIdHex
+        ethIdHex = hex(ethId)[2:]
+        ethIdHex = ethIdHex if len(ethIdHex) == 2 else '0' + ethIdHex
+        ip = "10.0.{}.{}".format(hostIdHex, ethIdHex)
+        mac = "00:00:00:00:{}:{}".format(hostIdHex, ethIdHex)
+        return ip, mac
+        
 
 def run(hosts, links, paths):        
     topo = CustomTopology(hosts, links)
     net = Mininet(topo)
     net.start()
 
-    for h in hosts:
+    for e in topo.myNet.edges():
+        h = e[0]
         hName = "h{}".format(h)
-        for eth_i in range(len(topo.myNet.nodes[h]["eths"])):
-            eth = topo.myNet.nodes[h]["eths"][eth_i]
-            mac = "00:00:00:00:0{}:0{}".format(h, eth_i+1)
-            macCmd = "ip link set dev {} address {}".format(eth, mac)
-            print(h, macCmd)
-            info(net[hName].cmd(macCmd))
+        eth = topo.myNet[e[0]][e[1]]["eth1"]
+        mac = topo.myNet[e[0]][e[1]]["mac1"]
+        macCmd = "ip link set dev {} address {}".format(eth, mac)
+        print(h, macCmd)
+        info(net[hName].cmd(macCmd))
 
     for i in range(len(paths)):
         path1 = paths[i]
@@ -71,6 +78,7 @@ def run(hosts, links, paths):
                 info(net[l1Name].cmd(staticRoute))
                 viaMac = topo.myNet[l1][l2]["mac2"]
                 staticArp = "arp -i {} -s {} {}".format(viaEth, dstIp, viaMac)
+                print(l1Name, staticArp)
                 info(net[l1Name].cmd(staticArp))
 
     for h in hosts:

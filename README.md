@@ -5,8 +5,11 @@ A place for useful Mininet scripts.
 
 ## Requirements
 ```
+Kernel 5.13.0-48-generic
+Ubuntu 20.04.2 LTS
 Python 3.8.10
 Mininet 2.6
+networkx 2.8.3
 ```
 
 ## Run

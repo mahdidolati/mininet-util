@@ -1,17 +1,12 @@
-from ipaddress import ip_address
-from turtle import position
 from mininet.topo import Topo
 from mininet.net import Mininet
-from mininet.node import Node
 from mininet.log import setLogLevel, info
 from mininet.cli import CLI
-import numpy as np
 import networkx as nx
 
 
 class CustomTopology(Topo):
     def __init__(self, hosts, links):
-        # Initialize topology
         Topo.__init__(self)
 
         self.myNet = nx.DiGraph()
@@ -53,10 +48,10 @@ def run(hosts, links, paths):
         hName = "h{}".format(h)
         for eth_i in range(len(topo.myNet.nodes[h]["eths"])):
             eth = topo.myNet.nodes[h]["eths"][eth_i]
-            mm = "00:00:00:00:0{}:0{}".format(h, eth_i+1)
-            zz = "ip link set dev {} address {}".format(eth, mm)
-            print(h, zz)
-            info(net[hName].cmd(zz))
+            mac = "00:00:00:00:0{}:0{}".format(h, eth_i+1)
+            macCmd = "ip link set dev {} address {}".format(eth, mac)
+            print(h, macCmd)
+            info(net[hName].cmd(macCmd))
 
     for i in range(len(paths)):
         path1 = paths[i]
@@ -106,10 +101,7 @@ if __name__ == "__main__":
         [1, 3, 2],
         [1, 3],
         [1, 3, 4],
-        [1, 3, 5],
-        [3, 2],
-        [3, 4],
-        [3, 5]
+        [1, 3, 5]
     ]
 
     run(hosts, links, paths)

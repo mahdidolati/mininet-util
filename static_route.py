@@ -92,24 +92,25 @@ def run(hosts, links, paths):
 if __name__ == "__main__":
     setLogLevel('info')
 
-    #      H1
-    #      |
+    #      H1 - H6
+    #      |    | 
     # H2 - H3 - H4
     #      |
     #      H5
 
-    hosts = [1, 2, 3, 4, 5]
+    hosts = [1, 2, 3, 4, 5, 6]
     links = [
         [1, 3],
         [2, 3],
         [3, 4],
-        [3, 5]
+        [3, 5],
+        [1, 6],
+        [6, 4]
     ]
     paths = [
         [1, 3, 2],
-        [1, 3],
-        [1, 3, 4],
-        [1, 3, 5]
+        [1, 3, 5],
+        [1, 6, 4]
     ]
 
     run(hosts, links, paths)

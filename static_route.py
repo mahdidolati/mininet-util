@@ -92,11 +92,11 @@ def run(hosts, links, paths):
 if __name__ == "__main__":
     setLogLevel('info')
 
-    #       H1
-    #       L1
-    # H2 L2 H3 L3 H4
-    #       L4
-    #       H5
+    #      H1
+    #      |
+    # H2 - H3 - H4
+    #      |
+    #      H5
 
     hosts = [1, 2, 3, 4, 5]
     links = [

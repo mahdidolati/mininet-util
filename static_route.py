@@ -41,7 +41,7 @@ class CustomTopology(Topo):
         hostIdHex = hostIdHex if len(hostIdHex) == 2 else '0' + hostIdHex
         ethIdHex = hex(ethId)[2:]
         ethIdHex = ethIdHex if len(ethIdHex) == 2 else '0' + ethIdHex
-        ip = "10.0.{}.{}".format(hostIdHex, ethIdHex)
+        ip = "10.0.{}.{}".format(hostId, ethId)
         mac = "00:00:00:00:{}:{}".format(hostIdHex, ethIdHex)
         return ip, mac
         

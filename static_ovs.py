@@ -54,7 +54,7 @@ class CustomTopology(Topo):
         return ip, mac
         
 
-def run(nodes, links, paths):        
+def run(nodes, links, paths, flows):        
     topo = CustomTopology(nodes, links)
     net = Mininet(topo, controller=RemoteController)
     net.start()
@@ -67,21 +67,10 @@ def run(nodes, links, paths):
         print(hName, macCmd)
         info(net[hName].cmd(macCmd))
 
-    # for n in nodes:
-    #     hName = "h{}".format(n)
-    #     net[hName].cmd("sysctl -w net.ipv6.conf.all.disable_ipv6=1")
-    #     net[hName].cmd("sysctl -w net.ipv6.conf.default.disable_ipv6=1")
-    #     net[hName].cmd("sysctl -w net.ipv6.conf.lo.disable_ipv6=1")
-    #     sName = "s{}".format(n)
-    #     net[sName].cmd("sysctl -w net.ipv6.conf.all.disable_ipv6=1")
-    #     net[sName].cmd("sysctl -w net.ipv6.conf.default.disable_ipv6=1")
-    #     net[sName].cmd("sysctl -w net.ipv6.conf.lo.disable_ipv6=1")
-    #     net[sName].cmd("ovs-vsctl set bridge {} datapath_type=netdev".format(sName))
-
     for i in range(len(paths)):
-        path1 = paths[i]
-        path2 = path1[::-1]
-        for path in [path1, path2]:
+        path_forward = paths[i]
+        path_reverse = path_forward[::-1]
+        for path in [path_forward, path_reverse]:
             print(path)
             srcName = "h{}".format(path[0])
             dstName = "h{}".format(path[-1])
@@ -111,8 +100,18 @@ def run(nodes, links, paths):
             )
             print(sName, forwardCmd)
             net[sName].cmd(forwardCmd) 
-
-            
+    
+    sockServers = set()
+    for h1, h2, scale in flows:
+        print(h1, h2, scale)
+        h1Name = "h{}".format(h1)
+        h2Name = "h{}".format(h2)
+        h1Ip = topo.myNet.nodes[h1Name]["ip"]
+        h2Ip = topo.myNet.nodes[h2Name]["ip"]
+        if h2 not in sockServers:
+            sockServers.add(h2)
+            net[h2Name].cmd("python3 sock_rcv.py --host-ip {} &".format(h2Ip))
+        net[h1Name].cmd("python3 sock_send.py --dst-ip {} --scale {} &".format(h2Ip, scale))
 
     # net.pingAll()
     CLI(net)
@@ -139,7 +138,11 @@ if __name__ == "__main__":
     ]
     paths = [
         [1, 3, 2],
-        [1, 3, 5],
+    ]
+    # list of (origin, destination, exp scale)
+    flows = [
+        (1, 2, 2.0),
+        (2, 1, 0.5)
     ]
 
-    run(nodes, links, paths)
+    run(nodes, links, paths, flows)

@@ -16,7 +16,7 @@ networkx 2.8.3
 Use `python3` to launch scripts.
 
 ## Documentation
-### Static Routing
+### Switch-based Static Routing
 Static routing is implemeted in `static_route.py`. It is possible to specify a set of hosts, links, and paths consisting of hosts. 
 The file already contains an example. To run the example, use the following commands:
 ```
@@ -29,6 +29,9 @@ In this case, host `h1` pings host `h4` via host `h6`. To verify, we can open `w
 mininet> h6 wireshark &
 ```
 It is possible to see ICMP packets exchange between `h1` (`10.0.1.2`) and `h4` (`10.0.4.2`).
+
+### Host-based Static Routing
+A static routing is implemeted in `static_ovs.py`. 
 
 ## License
 Copyright 2022 Mahdi Dolati.

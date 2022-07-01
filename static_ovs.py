@@ -4,9 +4,15 @@ from mininet.log import setLogLevel, info
 from mininet.cli import CLI
 from mininet.node import Controller, OVSKernelSwitch, RemoteController
 import networkx as nx
-import time
 
-from pysnmp.hlapi import *
+import sys
+import time
+from easysnmp import Session
+
+
+PYTHON_CMD = "python3"
+if sys.version_info.major == 2:
+    PYTHON_CMD = "python2"
 
 
 class CustomTopology(Topo):
@@ -33,7 +39,6 @@ class CustomTopology(Topo):
             self.addLink(sName, hName)
 
         self.ethToLinkIndex = dict()
-
         for l_idx in range(len(links)):
             l = links[l_idx]
             s1Name = "s{}".format(l[0])
@@ -109,6 +114,7 @@ def run(nodes, links, paths, flows):
             print(sName, forwardCmd)
             net[sName].cmd(forwardCmd) 
     
+    timeslot = 10
     sockServers = set()
     for h1, h2, scale in flows:
         print(h1, h2, scale)
@@ -118,22 +124,42 @@ def run(nodes, links, paths, flows):
         h2Ip = topo.myNet.nodes[h2Name]["ip"]
         if h2 not in sockServers:
             sockServers.add(h2)
-            net[h2Name].cmd("python3 sock_rcv.py --host-ip {} &".format(h2Ip))
-        net[h1Name].cmd("python3 sock_send.py --dst-ip {} --scale {} &".format(h2Ip, scale))
+            net[h2Name].cmd("{} sock_rcv.py --host-ip {} &".format(PYTHON_CMD, h2Ip))
+        net[h1Name].cmd("{} sock_send.py --dst-ip {} --scale {} --timeslot {} &".format(PYTHON_CMD, h2Ip, scale, timeslot))
 
-    time.sleep(10)
-    linkAllData = list()
-    session = netsnmp.Session(DestHost='127.0.0.1', Version=2, Community='public')
-    interfaces = netsnmp.VarList(netsnmp.Varbind('.1.3.6.1.2.1.2.2.1.2'))
-    resp = session.walk(interfaces)
-    linkDataSample = [0] * len(links)
-    for i in range(len(resp)):
-        ethName = resp[i]
-        link_idx = topo.ethToLinkIndex[ethName]
-        Traffic = netsnmp.VarList(netsnmp.Varbind('.1.3.6.1.2.1.31.1.1.1.6'))
-        res = session.walk(Traffic)
-        linkDataSample[link_idx] = res[i]
-    print(linkDataSample)
+    sName = hName = "s{}".format(nodes[0])
+    net[sName].cmd("service snmpd restart")
+    fw = open("link_rates.out", "w+")
+    session = Session(hostname='localhost', community='public', version=2)
+    linkDataSampleOld = [0] * len(links) 
+    for ts in range(10):
+        time.sleep(timeslot)
+        interfaces = session.walk('.1.3.6.1.2.1.2.2.1.2')
+        # print(interfaces)
+        linkDataSample = [0] * len(links)
+        for interface in interfaces:
+            ethName = interface.value
+            if ethName in topo.ethToLinkIndex:
+                rate = session.get(('.1.3.6.1.2.1.31.1.1.1.6', interface.oid_index))
+                rate = int(rate.value)
+                link_idx = topo.ethToLinkIndex[ethName]
+                linkDataSample[link_idx] += rate
+                # print(interface, ethName, link_idx, rate)
+        # compute rates
+        rates = list()
+        for rid in range(len(linkDataSample)):
+            rates.append((linkDataSample[rid] - linkDataSampleOld[rid]) / timeslot)
+        print(rates)
+        # write to file
+        for rid in range(len(rates)):
+            fw.write(str(rates[rid]))
+            if rid < len(rates)-1:
+                fw.write(", ")
+            else:
+                fw.write("\r\n")
+        linkDataSampleOld = linkDataSample
+        
+    fw.close()
 
     # net.pingAll()
     CLI(net)
@@ -142,6 +168,7 @@ def run(nodes, links, paths, flows):
 
 if __name__ == "__main__":
     setLogLevel('info')
+    info("Python command is: {}\n".format(PYTHON_CMD))
 
     #      s1 - s6
     #      |    | 
@@ -163,8 +190,8 @@ if __name__ == "__main__":
     ]
     # list of (origin, destination, exp scale)
     flows = [
-        (1, 2, 2.0),
-        (2, 1, 0.5)
+        (1, 2, 0.5),
+        (2, 1, 0.1)
     ]
 
     run(nodes, links, paths, flows)

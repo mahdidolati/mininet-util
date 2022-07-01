@@ -4,6 +4,9 @@ from mininet.log import setLogLevel, info
 from mininet.cli import CLI
 from mininet.node import Controller, OVSKernelSwitch, RemoteController
 import networkx as nx
+import time
+
+from pysnmp.hlapi import *
 
 
 class CustomTopology(Topo):
@@ -29,13 +32,18 @@ class CustomTopology(Topo):
                                               ip1=hIp, ip2=0, mac1=hMac, mac2=0)
             self.addLink(sName, hName)
 
-        for l in links:
+        self.ethToLinkIndex = dict()
+
+        for l_idx in range(len(links)):
+            l = links[l_idx]
             s1Name = "s{}".format(l[0])
             s2Name = "s{}".format(l[1])
             s1EthNum = len(self.myNet.nodes[s1Name]["eths"])
             s2EthNum = len(self.myNet.nodes[s2Name]["eths"])
             s1EthName = "{}-eth{}".format(s1Name, s1EthNum+1)
             s2EthName = "{}-eth{}".format(s2Name, s2EthNum+1)
+            self.ethToLinkIndex[s1EthName] = l_idx
+            self.ethToLinkIndex[s2EthName] = l_idx
             self.myNet.add_edge(s1Name, s2Name, eth1=s1EthName, eth2=s2EthName, 
                                                 eth1N=s1EthNum+1, eth2N=s2EthNum+1)
             self.myNet.add_edge(s2Name, s1Name, eth1=s2EthName, eth2=s1EthName, 
@@ -112,6 +120,20 @@ def run(nodes, links, paths, flows):
             sockServers.add(h2)
             net[h2Name].cmd("python3 sock_rcv.py --host-ip {} &".format(h2Ip))
         net[h1Name].cmd("python3 sock_send.py --dst-ip {} --scale {} &".format(h2Ip, scale))
+
+    time.sleep(10)
+    linkAllData = list()
+    session = netsnmp.Session(DestHost='127.0.0.1', Version=2, Community='public')
+    interfaces = netsnmp.VarList(netsnmp.Varbind('.1.3.6.1.2.1.2.2.1.2'))
+    resp = session.walk(interfaces)
+    linkDataSample = [0] * len(links)
+    for i in range(len(resp)):
+        ethName = resp[i]
+        link_idx = topo.ethToLinkIndex[ethName]
+        Traffic = netsnmp.VarList(netsnmp.Varbind('.1.3.6.1.2.1.31.1.1.1.6'))
+        res = session.walk(Traffic)
+        linkDataSample[link_idx] = res[i]
+    print(linkDataSample)
 
     # net.pingAll()
     CLI(net)

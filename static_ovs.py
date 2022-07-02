@@ -132,7 +132,7 @@ def run(nodes, links, paths, flows):
     fw = open("link_rates.out", "w+")
     session = Session(hostname='localhost', community='public', version=2)
     linkDataSampleOld = [0] * len(links) 
-    for ts in range(10):
+    for ts in range(20):
         time.sleep(timeslot)
         interfaces = session.walk('.1.3.6.1.2.1.2.2.1.2')
         # print(interfaces)
@@ -149,7 +149,7 @@ def run(nodes, links, paths, flows):
         rates = list()
         for rid in range(len(linkDataSample)):
             rates.append((linkDataSample[rid] - linkDataSampleOld[rid]) / timeslot)
-        print(rates)
+        print(ts, ":", rates)
         # write to file
         for rid in range(len(rates)):
             fw.write(str(rates[rid]))
@@ -187,11 +187,14 @@ if __name__ == "__main__":
     ]
     paths = [
         [1, 3, 2],
+        [2, 3, 4]
     ]
     # list of (origin, destination, exp scale)
     flows = [
         (1, 2, 0.5),
-        (2, 1, 0.1)
+        (2, 1, 0.5),
+        (2, 4, 1.0),
+        (4, 2, 1.0)
     ]
 
     run(nodes, links, paths, flows)

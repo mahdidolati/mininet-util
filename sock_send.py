@@ -22,14 +22,9 @@ if __name__ == "__main__":
             timeslot = int(timeslot)
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    t1 = time.time()
-    sc = np.random.exponential(scale=scale)
-    print(sc)
     while True:
         message = "0" * 100
         sock.sendto(bytes(message, "utf-8"), (dstIp, dstPort))
+        sc = np.random.exponential(scale=scale)
+        # sc = 5
         time.sleep(sc)
-        if time.time() - t1 > timeslot:
-            t1 = time.time()
-            sc = np.random.exponential(scale=scale)
-            print(sc)

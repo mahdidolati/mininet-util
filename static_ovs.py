@@ -114,8 +114,8 @@ def run(nodes, links, paths, flows):
             print(sName, forwardCmd)
             net[sName].cmd(forwardCmd) 
     
-    timeslot = 10
     sockServers = set()
+    logInterval = 5
     for h1, h2, scale in flows:
         print(h1, h2, scale)
         h1Name = "h{}".format(h1)
@@ -124,16 +124,17 @@ def run(nodes, links, paths, flows):
         h2Ip = topo.myNet.nodes[h2Name]["ip"]
         if h2 not in sockServers:
             sockServers.add(h2)
-            net[h2Name].cmd("{} sock_rcv.py --host-ip {} &".format(PYTHON_CMD, h2Ip))
-        net[h1Name].cmd("{} sock_send.py --dst-ip {} --scale {} --timeslot {} &".format(PYTHON_CMD, h2Ip, scale, timeslot))
+            net[h2Name].cmd("{} sock_rcv.py --host-ip {} --log-interval {} &".format(PYTHON_CMD, h2Ip, logInterval))
+        net[h1Name].cmd("{} sock_send.py --dst-ip {} --scale {} &".format(PYTHON_CMD, h2Ip, scale))
 
     sName = hName = "s{}".format(nodes[0])
     net[sName].cmd("service snmpd restart")
     fw = open("link_rates.out", "w+")
     session = Session(hostname='localhost', community='public', version=2)
     linkDataSampleOld = [0] * len(links) 
-    for ts in range(20):
-        time.sleep(timeslot)
+    averagePacketSize = 142
+    for ts in range(50):
+        time.sleep(logInterval)
         interfaces = session.walk('.1.3.6.1.2.1.2.2.1.2')
         # print(interfaces)
         linkDataSample = [0] * len(links)
@@ -148,7 +149,7 @@ def run(nodes, links, paths, flows):
         # compute rates
         rates = list()
         for rid in range(len(linkDataSample)):
-            rates.append((linkDataSample[rid] - linkDataSampleOld[rid]) / timeslot)
+            rates.append((linkDataSample[rid] - linkDataSampleOld[rid]) / (averagePacketSize * logInterval))
         print(ts, ":", rates)
         # write to file
         for rid in range(len(rates)):
@@ -187,14 +188,11 @@ if __name__ == "__main__":
     ]
     paths = [
         [1, 3, 2],
-        [2, 3, 4]
+        [2, 3, 1, 6, 4]
     ]
     # list of (origin, destination, exp scale)
     flows = [
-        (1, 2, 0.5),
-        (2, 1, 0.5),
-        (2, 4, 1.0),
-        (4, 2, 1.0)
+        (2, 4, 1.0)
     ]
 
     run(nodes, links, paths, flows)
